@@ -24,13 +24,15 @@ sudo docker run \
 
 # Build
 
-build by docker buildx 
-
+* build by docker buildx 
 ```
 docker buildx rm mybuilder
 docker buildx create --use --name mybuilder
 docker buildx inspect --bootstrap
-
 docker buildx build --pull . -t zcube/cadvisor:latest --platform linux/386,linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7 --push
 docker buildx build --pull . -t zcube/cadvisor:v0.34.0 --platform linux/386,linux/amd64,linux/arm64,linux/arm/v6,linux/arm/v7 --push
 ```
+
+# links
+* github : https://github.com/zcube/cadvisor-docker
+* docker hub : https://hub.docker.com/r/zcube/cadvisor
