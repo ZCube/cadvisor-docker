@@ -1,9 +1,10 @@
-# cAdvisor
+# cAdvisor (https://github.com/google/cadvisor)
 
 * arm, arm64, 386, x86_64 supported
 * Raspberry Pi tested
 * v0.34.0 release build (2019-10-27)
 * multi-stage build
+* not official image
 
 # Usage
 
