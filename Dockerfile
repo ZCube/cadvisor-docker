@@ -2,7 +2,7 @@ FROM golang:1.13-alpine
 
 ARG CADVISOR_VERSION
 
-run apk add --no-cache --virtual .build-deps gcc git make bash libc-dev \
+RUN apk add --no-cache --virtual .build-deps gcc git make bash libc-dev \
  && go get -d github.com/google/cadvisor \
  && cd $GOPATH/src/github.com/google/cadvisor \
  && git checkout $CADVISOR_VERSION \
