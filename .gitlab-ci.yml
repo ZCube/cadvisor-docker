@@ -1,0 +1,138 @@
+variables:
+  KO_DOCKER_REPO: ${CI_REGISTRY}/docker
+  REPO_URL: "https://github.com/ZCube/cadvisor-docker"
+  REPONAME: $CI_REGISTRY_IMAGE
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  DOCKER_BUILDKIT: 1
+  DOCKER_CLI_EXPERIMENTAL: enabled
+  BUILDX_BUILDER: builder
+  #BUILDX_PLATFORM: 
+  BUILDX_PLATFORM: linux/s390x,linux/386,linux/amd64,linux/arm64/v8,linux/arm/v7,linux/arm/v6,linux/ppc64le
+stages:
+  - prepare
+  - prepare-builder
+  - source
+  - base
+  - base2
+  - build
+
+select-version:
+  image: ${CI_REGISTRY}/docker/ko:alpine
+  stage: prepare
+  artifacts:
+    paths:
+      - version.txt
+  script:
+    - export CADVISOR_VERSION=$(curl -s https://api.github.com/repos/google/cadvisor/releases | jq -r "[[.[] | select(.draft != true) | select(.prerelease != true)][0]][0].name")
+    #- export CADVISOR_VERSION=$(curl -s https://api.github.com/repos/google/cadvisor/releases | jq -r "[[.[] | select(.draft != true) | select(.prerelease != false)][0]][0].name")
+    - echo $CADVISOR_VERSION > version.txt
+
+prepare-docker:
+  image: ${CI_REGISTRY}/docker/buildx:latest
+  stage: prepare-builder
+  when: manual
+  services:
+    - name: docker:19.03.6-dind
+      command: ["--registry-mirror", "https://${CI_REGISTRY}", "--experimental"]
+  variables:
+    DOCKER_CLI_EXPERIMENTAL: "enabled"
+    version: "v${PACKAGE_VERSION}"
+  artifacts:
+    paths:
+      - version.txt
+  before_script:
+    - docker run --rm --privileged multiarch/qemu-user-static:5.2.0-2 --reset -p yes
+    #- docker run --rm --privileged multiarch/qemu-user-static:4.2.0-7 --reset -p yes
+    #- docker run --rm --privileged multiarch/qemu-user-static:3.1.1-2 --reset -p yes
+    - docker buildx create --use --driver docker-container --name ${BUILDX_BUILDER} --platform=${BUILDX_PLATFORM}
+    - docker buildx inspect --bootstrap ${BUILDX_BUILDER}
+    - docker buildx ls
+    - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
+  script:
+    - export CADVISOR_VERSION=$(cat version.txt)
+    - chmod +x *.sh
+    - docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}:builder --build-arg CADVISOR_VERSION -f Dockerfile.builder -t ${CI_REGISTRY_IMAGE}:builder --push "."
+
+download-source:
+  image: ${CI_REGISTRY_IMAGE}:builder
+  stage: source
+  variables:
+    GO_FLAGS: "-tags=netgo"
+    GO111MODULE: "on"
+    CGO_ENABLED: "0"
+  artifacts:
+    paths:
+      - "*.tar.gz"
+  script:
+    - export CADVISOR_VERSION=$(cat version.txt)
+    - git clone https://github.com/google/cadvisor
+    - cd cadvisor
+    - git checkout $CADVISOR_VERSION
+    - go get -u github.com/Shopify/sarama
+    - go mod vendor
+    - go mod tidy
+    - go get -u github.com/Shopify/sarama
+    - ./build/assets.sh
+    - mkdir -p s390x
+    - ./build/build.sh s390x
+    - mv cadvisor s390x/
+    - mkdir -p 386
+    - ./build/build.sh 386
+    - mv cadvisor 386/
+    - mkdir -p amd64
+    - ./build/build.sh amd64
+    - mv cadvisor amd64/
+    - mkdir -p arm64
+    - ./build/build.sh arm64
+    - mv cadvisor arm64/
+    - mkdir -p arm/v7
+    - GOARM=7 ./build/build.sh arm
+    - mv cadvisor arm/v7/
+    - mkdir -p arm/v6
+    - GOARM=6 ./build/build.sh arm
+    - mv cadvisor arm/v6/
+    - mkdir -p ppc64le
+    - ./build/build.sh ppc64le
+    - mv cadvisor ppc64le/
+    - go mod vendor
+    - rm -f cadvisor || true
+    - cd ..
+    - tar czf cadvisor.tar.gz cadvisor
+    - cd $(go env GOMODCACHE)/..
+    - tar czf ${CI_PROJECT_DIR}/mod.tar.gz mod
+
+build-docker:
+  image: ${CI_REGISTRY}/docker/buildx:latest
+  stage: base
+  services:
+    - name: docker:19.03.6-dind
+      command: ["--registry-mirror", "https://${CI_REGISTRY}", "--experimental"]
+  variables:
+    DOCKER_CLI_EXPERIMENTAL: "enabled"
+    version: "v${PACKAGE_VERSION}"
+  artifacts:
+    paths:
+      - version.txt
+  before_script:
+    #- docker run --rm --privileged multiarch/qemu-user-static:5.2.0-2 --reset -p yes
+    - docker run --rm --privileged multiarch/qemu-user-static:4.2.0-7 --reset -p yes
+    #- docker run --rm --privileged multiarch/qemu-user-static:3.1.1-2 --reset -p yes
+    - docker buildx create --use --driver docker-container --name ${BUILDX_BUILDER} --platform=${BUILDX_PLATFORM}
+    - docker buildx inspect --bootstrap ${BUILDX_BUILDER}
+    - docker buildx ls
+    - docker login -u gitlab-ci-token -p ${CI_JOB_TOKEN} ${CI_REGISTRY}
+  script:
+    - export CADVISOR_VERSION=$(cat version.txt)
+    - chmod +x *.sh
+    - docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}:${CADVISOR_VERSION} --build-arg CADVISOR_VERSION -f Dockerfile.deploy -t ${CI_REGISTRY_IMAGE}:${CADVISOR_VERSION} --push "."
+
+manage-docker:
+  image: ${CI_REGISTRY}/docker/ko:alpine
+  stage: build
+  when: manual
+  script:
+    - export CADVISOR_VERSION=$(cat version.txt)
+    - skopeo copy --all --src-creds=gitlab-ci-token:${CI_JOB_TOKEN} --dest-creds=zcube:${DOCKER_HUB_KEY} docker://${CI_REGISTRY_IMAGE}:${CADVISOR_VERSION} docker://zcube/cadvisor:${CADVISOR_VERSION}
+    - skopeo copy --all --src-creds=gitlab-ci-token:${CI_JOB_TOKEN} --dest-creds=zcube:${DOCKER_HUB_KEY} docker://${CI_REGISTRY_IMAGE}:${CADVISOR_VERSION} docker://zcube/cadvisor:latest

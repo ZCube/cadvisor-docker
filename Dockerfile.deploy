@@ -1,0 +1,43 @@
+FROM reg.zcube.kr/docker/cadvisor:builder AS build
+
+ENV GOROOT /usr/lib/go
+ENV GOPATH /go
+ENV GO_TAGS netgo
+ENV CGO_ENABLED 1
+ARG TARGETVARIANT
+ARG TARGETARCH
+
+#ENV GO_FLAGS="-tags=netgo"
+ADD env.sh /env.sh
+ADD cadvisor.tar.gz $GOPATH/src/github.com/google/
+ADD mod.tar.gz $GOPATH/pkg/
+
+run chmod +x /env.sh \
+ && ./env.sh \
+ && cd $GOPATH/src/github.com/google/cadvisor \
+ && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
+ && GO111MODULE=on ./build/build.sh || true \
+ && mv -f cadvisor /cadvisor || true
+
+FROM alpine:3.13
+MAINTAINER dengnan@google.com vmarmol@google.com vishnuk@google.com jimmidyson@gmail.com stclair@google.com
+
+RUN apk --no-cache add libc6-compat device-mapper findutils ndctl && \
+    apk --no-cache add zfs || true && \
+    apk --no-cache add thin-provisioning-tools --repository http://dl-3.alpinelinux.org/alpine/edge/main/ && \
+    echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
+    rm -rf /var/cache/apk/*
+
+# Grab cadvisor,libpfm4 and libipmctl from "build" container.
+COPY --from=build /usr/local/lib/libpfm.so* /usr/local/lib/
+COPY --from=build /usr/local/lib/libipmctl.so* /usr/local/lib/
+COPY --from=build /cadvisor /usr/bin/cadvisor
+
+EXPOSE 8080
+
+ENV CADVISOR_HEALTHCHECK_URL=http://localhost:8080/healthz
+
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget --quiet --tries=1 --spider $CADVISOR_HEALTHCHECK_URL || exit 1
+
+ENTRYPOINT ["/usr/bin/cadvisor", "-logtostderr"]
