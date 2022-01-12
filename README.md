@@ -29,4 +29,5 @@ sudo docker run \
 
 # links
 * github : https://github.com/zcube/cadvisor-docker
-* docker hub : https://hub.docker.com/r/zcube/cadvisor
+* docker hub : https://hub.docker.com/r/zcube/cadvisor (deprecated)
+* official registry : gcr.io/cadvisor/cadvisor
