@@ -1,6 +1,6 @@
-FROM reg.zcube.kr/docker/cadvisor:builder AS build
+FROM ghcr.io/zcube/cadvisor-docker/builder:latest AS build
 
-ENV GOROOT /usr/lib/go
+ENV GOROOT /usr/local/go
 ENV GOPATH /go
 ENV GO_TAGS netgo
 ENV CGO_ENABLED 1
@@ -13,13 +13,13 @@ ADD cadvisor.tar.gz $GOPATH/src/github.com/google/
 ADD mod.tar.gz $GOPATH/pkg/
 
 run chmod +x /env.sh \
- && ./env.sh \
+ && /env.sh \
  && cd $GOPATH/src/github.com/google/cadvisor \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
  && GO111MODULE=on ./build/build.sh || true \
  && mv -f cadvisor /cadvisor || true
 
-FROM alpine:3.13
+FROM alpine:3.16
 MAINTAINER dengnan@google.com vmarmol@google.com vishnuk@google.com jimmidyson@gmail.com stclair@google.com
 
 RUN apk --no-cache add libc6-compat device-mapper findutils ndctl && \

@@ -1,0 +1,108 @@
+name: Build
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * 5'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: >-
+      ${{ !contains(github.event.head_commit.message, '[ci skip]') &&
+      !contains(github.event.head_commit.message, '[skip ci]')
+      }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up QEMU dependency
+        uses: docker/setup-qemu-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Log in to the container registry
+        uses: docker/login-action@v1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract lowercase repository name
+        uses: ASzc/change-string-case-action@v1
+        with:
+          string: ${{ github.repository }}
+        id: repository
+      - name: Extract branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: extract_branch
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.18
+      - name: Build Builder
+        shell: bash
+        run: |
+          export CI_PROJECT_DIR=${PWD}
+          export CI_REGISTRY_IMAGE=${{ env.REGISTRY }}/${{ steps.repository.outputs.lowercase }}
+          export BUILDX_PLATFORM=linux/s390x,linux/386,linux/amd64,linux/arm64/v8,linux/arm/v7,linux/arm/v6,linux/ppc64le
+          export CADVISOR_VERSION=$(curl -s https://api.github.com/repos/google/cadvisor/releases | jq -r "[[.[] | select(.draft != true) | select(.prerelease != true)][0]][0].name")
+          export GO111MODULE=on
+          export GO_FLAGS="-tags=netgo"
+          export CGO_ENABLED="0"
+          echo ${CI_REGISTRY_IMAGE}
+          echo ${BUILDX_PLATFORM}
+          echo ${CADVISOR_VERSION}
+          echo #0
+          docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}/cache/builder --cache-to ${CI_REGISTRY_IMAGE}/cache/builder --build-arg CADVISOR_VERSION -f Dockerfile.builder -t ${CI_REGISTRY_IMAGE}/builder --push "."
+          echo #1
+          git clone https://github.com/google/cadvisor
+          cd cadvisor
+          git checkout $CADVISOR_VERSION
+          go get github.com/Shopify/sarama@latest
+          go mod tidy
+          go mod download
+          go mod vendor
+          cd cmd
+          go get github.com/Shopify/sarama@latest
+          go mod tidy
+          go mod download
+          go mod vendor
+          cd ..
+          GO111MODULE=off ./build/assets.sh
+          echo step build
+          cat go.mod
+          mkdir -p s390x
+          ./build/build.sh s390x
+          mv cadvisor s390x/
+          mkdir -p 386
+          ./build/build.sh 386
+          mv cadvisor 386/
+          mkdir -p amd64
+          ./build/build.sh amd64
+          mv cadvisor amd64/
+          mkdir -p arm64
+          ./build/build.sh arm64
+          mv cadvisor arm64/
+          mkdir -p arm/v7
+          GOARM=7 ./build/build.sh arm
+          mv cadvisor arm/v7/
+          mkdir -p arm/v6
+          GOARM=6 ./build/build.sh arm
+          mv cadvisor arm/v6/
+          mkdir -p ppc64le
+          ./build/build.sh ppc64le
+          mv cadvisor ppc64le/
+          go mod vendor
+          rm -f cadvisor || true
+          cd ..
+          tar czf cadvisor.tar.gz cadvisor
+          cd $(go env GOMODCACHE)/..
+          tar czf ${CI_PROJECT_DIR}/mod.tar.gz mod
+          cd -
+          echo #2
+          docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}/cache/cadvisor:${CADVISOR_VERSION} --cache-to ${CI_REGISTRY_IMAGE}/cache/cadvisor:${CADVISOR_VERSION} --build-arg CADVISOR_VERSION -f Dockerfile.deploy -t ${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION} -t ${CI_REGISTRY_IMAGE}/cadvisor:latest --push "."
