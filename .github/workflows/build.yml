@@ -54,6 +54,7 @@ jobs:
           export GO111MODULE=on
           export GO_FLAGS="-tags=netgo"
           export CGO_ENABLED="0"
+          export OUTPUT_NAME_WITH_ARCH=false
           echo ${CI_REGISTRY_IMAGE}
           echo ${BUILDX_PLATFORM}
           echo ${CADVISOR_VERSION}
@@ -63,6 +64,8 @@ jobs:
           git clone https://github.com/google/cadvisor
           cd cadvisor
           git checkout $CADVISOR_VERSION
+          go mod download
+          ./build/assets.sh
           go get github.com/Shopify/sarama@latest
           go mod tidy
           go mod download
@@ -73,30 +76,29 @@ jobs:
           go mod download
           go mod vendor
           cd ..
-          GO111MODULE=off ./build/assets.sh
           echo step build
           cat go.mod
           mkdir -p s390x
-          ./build/build.sh s390x
-          mv cadvisor s390x/
+          GOOS=linux GOARCH=s390x ./build/build.sh s390x
+          mv _output/cadvisor s390x/
           mkdir -p 386
-          ./build/build.sh 386
-          mv cadvisor 386/
+          GOOS=linux GOARCH=386 ./build/build.sh 386
+          mv _output/cadvisor 386/
           mkdir -p amd64
-          ./build/build.sh amd64
-          mv cadvisor amd64/
+          GOOS=linux GOARCH=amd64 ./build/build.sh amd64
+          mv _output/cadvisor amd64/
           mkdir -p arm64
-          ./build/build.sh arm64
-          mv cadvisor arm64/
+          GOOS=linux GOARCH=arm64 ./build/build.sh arm64
+          mv _output/cadvisor arm64/
           mkdir -p arm/v7
-          GOARM=7 ./build/build.sh arm
-          mv cadvisor arm/v7/
+          GOOS=linux GOARCH=arm GOARM=7 ./build/build.sh arm
+          mv _output/cadvisor arm/v7/
           mkdir -p arm/v6
-          GOARM=6 ./build/build.sh arm
-          mv cadvisor arm/v6/
+          GOOS=linux GOARCH=arm GOARM=6 ./build/build.sh arm
+          mv _output/cadvisor arm/v6/
           mkdir -p ppc64le
-          ./build/build.sh ppc64le
-          mv cadvisor ppc64le/
+          GOOS=linux GOARCH=ppc64le ./build/build.sh ppc64le
+          mv _output/cadvisor ppc64le/
           go mod vendor
           rm -f cadvisor || true
           cd ..

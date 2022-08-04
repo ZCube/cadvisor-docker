@@ -16,8 +16,8 @@ run chmod +x /env.sh \
  && /env.sh \
  && cd $GOPATH/src/github.com/google/cadvisor \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
- && GO111MODULE=on ./build/build.sh || true \
- && mv -f cadvisor /cadvisor || true
+ && GO111MODULE=on OUTPUT_NAME_WITH_ARCH=false ./build/build.sh || true \
+ && mv -f _output/cadvisor /cadvisor || true
 
 FROM alpine:3.16
 MAINTAINER dengnan@google.com vmarmol@google.com vishnuk@google.com jimmidyson@gmail.com stclair@google.com

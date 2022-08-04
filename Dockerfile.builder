@@ -15,7 +15,7 @@ RUN wget https://sourceforge.net/projects/perfmon2/files/libpfm4/libpfm-4.11.0.t
   make install -C libpfm-4.11.0 || true && \
   rm -rf libpfm-4.11.0
 
-RUN git clone -b v02.00.00.3820 https://github.com/intel/ipmctl/ && \
+RUN git clone -b v02.00.00.3885 https://github.com/intel/ipmctl/ && \
     cd ipmctl && \
     mkdir output && \
     cd output && \
