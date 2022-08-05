@@ -108,5 +108,5 @@ jobs:
           cd -
           echo #2
           docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}/cache/cadvisor:${CADVISOR_VERSION}-pre --cache-to ${CI_REGISTRY_IMAGE}/cache/cadvisor:${CADVISOR_VERSION}-pre --build-arg CADVISOR_VERSION -f Dockerfile.deploy -t ${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION}-pre -t ${CI_REGISTRY_IMAGE}/cadvisor:latest-pre --push "."
-          skopeo copy --all --dest-creds=zcube:${{ secrets.DOCKER_HUB_KEY }} docker://${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION}-pre docker://zcube/cadvisor:${CADVISOR_VERSION}-pre
-          skopeo copy --all --dest-creds=zcube:${{ secrets.DOCKER_HUB_KEY }} docker://${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION}-pre docker://zcube/cadvisor:latest-pre
+          # skopeo copy --all --dest-creds=zcube:${{ secrets.DOCKER_HUB_KEY }} docker://${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION}-pre docker://zcube/cadvisor:${CADVISOR_VERSION}-pre
+          # skopeo copy --all --dest-creds=zcube:${{ secrets.DOCKER_HUB_KEY }} docker://${CI_REGISTRY_IMAGE}/cadvisor:${CADVISOR_VERSION}-pre docker://zcube/cadvisor:latest-pre

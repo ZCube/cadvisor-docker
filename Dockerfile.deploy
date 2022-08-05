@@ -9,12 +9,12 @@ ARG TARGETARCH
 
 #ENV GO_FLAGS="-tags=netgo"
 ADD env.sh /env.sh
-ADD cadvisor.tar.gz $GOPATH/src/github.com/google/
+ADD cadvisor.tar.gz /tmp
 ADD mod.tar.gz $GOPATH/pkg/
 
 run chmod +x /env.sh \
  && /env.sh \
- && cd $GOPATH/src/github.com/google/cadvisor \
+ && cd /tmp/cadvisor \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
  && GO111MODULE=on OUTPUT_NAME_WITH_ARCH=false ./build/build.sh || true \
  && mv -f _output/cadvisor /cadvisor || true
