@@ -15,6 +15,7 @@ ADD mod.tar.gz $GOPATH/pkg/
 run chmod +x /env.sh \
  && /env.sh \
  && cd /tmp/cadvisor \
+ && git config --global --add safe.directory /tmp/cadvisor \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
  && GO111MODULE=on OUTPUT_NAME_WITH_ARCH=false ./build/build.sh || true \
  && mv -f _output/cadvisor /cadvisor || true
