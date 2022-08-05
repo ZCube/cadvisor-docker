@@ -16,9 +16,12 @@ run chmod +x /env.sh \
  && /env.sh \
  && cd /tmp/cadvisor \
  && git config --global --add safe.directory /tmp/cadvisor \
+ && cp -f $TARGETARCH/cadvisor /cadvisor \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
  && GO111MODULE=on OUTPUT_NAME_WITH_ARCH=false ./build/build.sh || true \
- && mv -f _output/cadvisor /cadvisor || true
+ && mv -f _output/cadvisor /cadvisor || true \
+ && cd /tmp \
+ && rm -rf /tmp/cadvisor*
 
 FROM alpine:3.16
 MAINTAINER dengnan@google.com vmarmol@google.com vishnuk@google.com jimmidyson@gmail.com stclair@google.com
