@@ -44,7 +44,7 @@ run chmod +x /env.sh \
  && cp -f $TARGETARCH/$TARGETVARIANT/cadvisor /cadvisor \
  && git config --global --add safe.directory /tmp/cadvisor || true \
  && GO111MODULE=on OUTPUT_NAME_WITH_ARCH=false ./build/build.sh || true \
- && mv -f _output/cadvisor /cadvisor || true \
+ && cp -f _output/cadvisor /cadvisor || true \
  && cd /tmp \
  && rm -rf /tmp/cadvisor*
 
