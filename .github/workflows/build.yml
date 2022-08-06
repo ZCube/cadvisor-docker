@@ -49,7 +49,7 @@ jobs:
         run: |
           export CI_PROJECT_DIR=${PWD}
           export CI_REGISTRY_IMAGE=${{ env.REGISTRY }}/${{ steps.repository.outputs.lowercase }}
-          export BUILDX_PLATFORM=linux/s390x,linux/386,linux/amd64,linux/arm64/v8,linux/arm/v7,linux/arm/v6,linux/ppc64le
+          export BUILDX_PLATFORM=linux/s390x,linux/386,linux/amd64,linux/arm64/v8,linux/arm/v7,linux/ppc64le
           export CADVISOR_VERSION=$(curl -s https://api.github.com/repos/google/cadvisor/releases | jq -r "[[.[] | select(.draft != true) | select(.prerelease != true)][0]][0].name")
           export GO111MODULE=on
           export GO_FLAGS="-tags=netgo"
@@ -92,9 +92,9 @@ jobs:
           mkdir -p arm/v7
           GOOS=linux GOARCH=arm GOARM=7 ./build/build.sh arm
           mv _output/cadvisor arm/v7/
-          mkdir -p arm/v6
-          GOOS=linux GOARCH=arm GOARM=6 ./build/build.sh arm
-          mv _output/cadvisor arm/v6/
+          # mkdir -p arm/v6
+          # GOOS=linux GOARCH=arm GOARM=6 ./build/build.sh arm
+          # mv _output/cadvisor arm/v6/
           mkdir -p ppc64le
           GOOS=linux GOARCH=ppc64le ./build/build.sh ppc64le
           mv _output/cadvisor ppc64le/
