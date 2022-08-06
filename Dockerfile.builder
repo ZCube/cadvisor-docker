@@ -1,6 +1,6 @@
-FROM golang:1.18.4-alpine3.16 AS build
+FROM alpine:3.16 AS build
 
-RUN apk --no-cache add libc6-compat device-mapper findutils build-base linux-headers linux-lts-dev bash git wget cmake pkgconfig ndctl-dev make python3 && \
+RUN apk --no-cache add libc6-compat device-mapper findutils build-base linux-headers linux-lts-dev bash git wget cmake pkgconfig ndctl-dev make python3 go && \
     apk --no-cache add zfs || true && \
     apk --no-cache add thin-provisioning-tools --repository http://dl-3.alpinelinux.org/alpine/edge/main/ && \
     echo 'hosts: files mdns4_minimal [NOTFOUND=return] dns mdns4' >> /etc/nsswitch.conf && \
