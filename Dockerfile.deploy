@@ -1,6 +1,6 @@
 FROM ghcr.io/zcube/cadvisor-docker/builder:latest AS build
 
-ENV GOROOT /usr/local/go
+ENV GOROOT /usr/lib/go
 ENV GOPATH /go
 ENV GO_TAGS netgo
 ENV CGO_ENABLED 1
