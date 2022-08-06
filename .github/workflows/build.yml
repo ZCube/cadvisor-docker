@@ -59,7 +59,6 @@ jobs:
           echo ${BUILDX_PLATFORM}
           echo ${CADVISOR_VERSION}
           echo #0
-          docker buildx build --platform=${BUILDX_PLATFORM} --cache-from ${CI_REGISTRY_IMAGE}/cache/builder --cache-to ${CI_REGISTRY_IMAGE}/cache/builder --build-arg CADVISOR_VERSION -f Dockerfile.builder -t ${CI_REGISTRY_IMAGE}/builder --push "."
           echo #1
           git clone https://github.com/google/cadvisor
           cd cadvisor
